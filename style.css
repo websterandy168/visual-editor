@@ -60,3 +60,45 @@ input[type="file"] { font-size: 14px; }
 #delete-btn:hover {
     background-color: #d32f2f;
 }
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+.modal-overlay.hidden {
+    display: none;
+}
+.modal-container {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 400px;
+}
+.modal-content {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.modal-input-group { display: flex; flex-direction: column; gap: 5px; }
+.modal-input-group label { font-weight: bold; color: #555; }
+.modal-input-group input { padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions button { padding: 10px 20px; font-size: 16px; }
+#modal-cancel-btn {
+    background-color: #757575;
+}
+#modal-cancel-btn:hover {
+    background-color: #616161;
+}

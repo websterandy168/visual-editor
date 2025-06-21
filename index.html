@@ -15,23 +15,23 @@
     <div class="main-container">
         <div class="toolbox">
             <h2>Toolbox</h2>
-            
-            <button id="add-text">Add Text</button>
-            
+
+            <h3>Visual Tools</h3>
+            <button id="add-polygon-btn">Add Polygon</button>
+            <button id="tape-diagram-btn">Tape Diagram</button>
+            <button id="add-dimension-btn">Add Dimension</button>
             <div class="input-group">
                 <label for="image-loader">Add Image:</label>
                 <input type="file" id="image-loader" accept="image/*">
             </div>
 
             <hr>
-            <h3>Math Blocks</h3>
-            <button id="tape-diagram-btn">Tape Diagram</button>
-            <button id="add-dimension-btn">Add Dimension</button>
-            <button id="add-polygon-btn">Add Polygon</button>
+            <h3>Text & Math</h3>
+            <button id="add-text">Add Text</button>
             <button class="latex-btn" data-template="fraction">Fraction</button>
             <button class="latex-btn" data-template="sqrt">Square Root</button>
             <button class="latex-btn" data-template="power">Exponent</button>
-            <button class="latex-btn" data-template="integral">Integral</button>
+            <button id="custom-latex-btn">Custom LaTeX</button>
             
             <hr>
             <h3>Actions</h3>
@@ -46,6 +46,19 @@
         <div id="properties-panel" class="properties-panel hidden">
             <h3>Properties</h3>
             <div id="properties-content"></div>
+        </div>
+    </div>
+
+    <div id="custom-modal-overlay" class="modal-overlay hidden">
+        <div id="custom-modal" class="modal-container">
+            <h3 id="modal-title">Input Required</h3>
+            <div id="modal-content" class="modal-content">
+                <!-- Input fields will be generated here by JavaScript -->
+            </div>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn">Cancel</button>
+                <button id="modal-ok-btn">OK</button>
+            </div>
         </div>
     </div>
 

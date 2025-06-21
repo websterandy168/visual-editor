@@ -12,9 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let polygonPoints = [];
     let tempPolygonLines = [];
     let tempFollowLine = null;
+    let clipboard = null; // To store copied objects
 
     const propertiesPanel = document.getElementById('properties-panel');
     const propertiesContent = document.getElementById('properties-content');
+    const modalOverlay = document.getElementById('custom-modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalContent = document.getElementById('modal-content');
+    const modalOkBtn = document.getElementById('modal-ok-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
     let infoBox = null;
 
     canvas.on('text:editing:entered', () => {
@@ -30,11 +37,120 @@ document.addEventListener('DOMContentLoaded', () => {
     infoBox.className = 'info-box';
     document.body.appendChild(infoBox);
 
+    function copyActiveObject() {
+        const activeObject = canvas.getActiveObject();
+        if (!activeObject) return;
+
+        activeObject.clone(function(clonedObj) {
+            clipboard = clonedObj;
+        });
+    }
+
+    function pasteObject() {
+        if (!clipboard) return;
+
+        clipboard.clone(function(clonedObj) {
+            canvas.discardActiveObject(); // Deselect current object
+            
+            // Offset the pasted object slightly
+            clonedObj.set({
+                left: clonedObj.left + 10,
+                top: clonedObj.top + 10,
+                evented: true, // Ensure it's interactive
+            });
+
+            // If it's a group (activeSelection), iterate and add each object
+            if (clonedObj.type === 'activeSelection') {
+                clonedObj.canvas = canvas; // Assign canvas to the group for proper rendering
+                clonedObj.forEachObject(function(obj) {
+                    canvas.add(obj);
+                });
+                // Reselect the group
+                clonedObj.setCoords();
+                canvas.setActiveObject(clonedObj);
+            } else {
+                canvas.add(clonedObj);
+                canvas.setActiveObject(clonedObj);
+            }
+            canvas.renderAll();
+        });
+    }
+
+    function cutActiveObject() {
+        copyActiveObject();
+        deleteActiveObject();
+    }
+
+    function showCustomPrompt({ title, fields }) {
+        return new Promise((resolve) => {
+            modalTitle.textContent = title;
+            modalContent.innerHTML = ''; // Clear previous content
+    
+            fields.forEach(field => {
+                const group = document.createElement('div');
+                group.className = 'modal-input-group';
+                
+                const label = document.createElement('label');
+                label.setAttribute('for', field.id);
+                label.textContent = field.label;
+                
+                const input = document.createElement('input');
+                input.type = field.type || 'text';
+                input.id = field.id;
+                input.name = field.id;
+                input.placeholder = field.placeholder || '';
+                if (field.value) input.value = field.value;
+                
+                group.appendChild(label);
+                group.appendChild(input);
+                modalContent.appendChild(group);
+            });
+    
+            modalOverlay.classList.remove('hidden');
+            modalContent.querySelector('input')?.focus();
+    
+            const modalKeydownHandler = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent this event from bubbling up to the window listener
+                    modalOkBtn.onclick();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent this event from bubbling up to the window listener
+                    modalCancelBtn.onclick();
+                }
+            };
+
+            const close = () => {
+                modalOverlay.classList.add('hidden');
+                modalOkBtn.onclick = null;
+                modalCancelBtn.onclick = null;
+                modalOverlay.onclick = null;
+                document.removeEventListener('keydown', modalKeydownHandler);
+            };
+    
+            modalOkBtn.onclick = () => {
+                const result = {};
+                fields.forEach(field => result[field.id] = document.getElementById(field.id).value);
+                close();
+                resolve(result);
+            };
+    
+            modalCancelBtn.onclick = () => {
+                close();
+                resolve(null); // Resolve with null to match prompt's cancel behavior
+            };
+    
+            modalOverlay.onclick = (e) => { if (e.target === modalOverlay) modalCancelBtn.onclick(); };
+            document.addEventListener('keydown', modalKeydownHandler);
+        });
+    }
+
     const addTextButton = document.getElementById('add-text');
-    addTextButton.addEventListener('click', () => {
-        const text = prompt('Enter your text:');
-        if (text) {
-            const textbox = new fabric.Textbox(text, {
+    addTextButton.addEventListener('click', async () => {
+        const result = await showCustomPrompt({ title: 'Add Text', fields: [{ id: 'text', label: 'Enter your text:' }] });
+        if (result && result.text) {
+            const textbox = new fabric.Textbox(result.text, {
                 left: 50, top: 50, width: 200, fontSize: 24, fill: '#000000',
                 padding: 7, fontFamily: 'Roboto'
             });
@@ -203,20 +319,21 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.renderAll();
     }
 
-    function addPreciseSegment() {
+    async function addPreciseSegment() {
         if (!isPolygonMode || polygonPoints.length < 1) return;
-        const input = prompt("Enter length and angle (e.g., 100, 45):");
-        if (input === null) return; // User cancelled
+        const result = await showCustomPrompt({ title: 'Add Precise Segment', fields: [{ id: 'segment', label: 'Length, Angle', placeholder: 'e.g., 100, 45' }] });
 
-        const parts = input.split(',').map(s => parseFloat(s.trim()));
-        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-            const [length, angleDeg] = parts;
-            const angleRad = fabric.util.degreesToRadians(angleDeg);
-            const lastPoint = polygonPoints[polygonPoints.length - 1];
-            // Calculate next point based on math angle (0=right, 90=up), inverting Y for screen coordinates
-            const nextPoint = { x: lastPoint.x + length * Math.cos(angleRad), y: lastPoint.y - length * Math.sin(angleRad) };
-            addPolygonPoint(nextPoint);
-        } else { alert("Invalid format. Please use 'length, angle'."); }
+        if (result && result.segment) {
+            const parts = result.segment.split(',').map(s => parseFloat(s.trim()));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                const [length, angleDeg] = parts;
+                const angleRad = fabric.util.degreesToRadians(angleDeg);
+                const lastPoint = polygonPoints[polygonPoints.length - 1];
+                // Calculate next point based on math angle (0=right, 90=up), inverting Y for screen coordinates
+                const nextPoint = { x: lastPoint.x + length * Math.cos(angleRad), y: lastPoint.y - length * Math.sin(angleRad) };
+                addPolygonPoint(nextPoint);
+            } else { alert("Invalid format. Please use 'length, angle'."); }
+        }
     }
 
     function getAbsolutePoints(polygon) {
@@ -253,10 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const tapeDiagramBtn = document.getElementById('tape-diagram-btn');
-    tapeDiagramBtn.addEventListener('click', () => {
-        const segments = prompt('How many segments for the tape diagram?');
-        if (segments) {
-            const numSegments = parseInt(segments, 10);
+    tapeDiagramBtn.addEventListener('click', async () => {
+        const result = await showCustomPrompt({ title: 'Tape Diagram', fields: [{ id: 'segments', label: 'How many segments?', type: 'number' }] });
+        if (result && result.segments) {
+            const numSegments = parseInt(result.segments, 10);
             if (!isNaN(numSegments) && numSegments > 0) {
                 createTapeDiagram(numSegments);
             } else {
@@ -358,22 +475,22 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.renderAll();
     });
     
-    canvas.on('mouse:down', (o) => {
+    canvas.on('mouse:down', async (o) => {
         const pointer = canvas.getPointer(o.e);
 
-        if (isDimensionMode) {
+        if (isDimensionMode && !isTextEditing) { // Ensure not in text editing mode
             if (!dimensionStartPoint) {
-            dimensionStartPoint = { x: pointer.x, y: pointer.y };
-            tempLine = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-                stroke: '#aaa', strokeWidth: 2, strokeDashArray: [5, 5]
-            });
-            canvas.add(tempLine);
+                dimensionStartPoint = { x: pointer.x, y: pointer.y };
+                tempLine = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+                    stroke: '#aaa', strokeWidth: 2, strokeDashArray: [5, 5]
+                });
+                canvas.add(tempLine);
         } else {
             // Second click: create the dimension object
-            const label = prompt('Enter label for the dimension:');
-            const endPoint = { x: pointer.x, y: dimensionStartPoint.y };
-            if (label !== null) { // Only create if user doesn't cancel
-                createDimension(dimensionStartPoint, endPoint, label);
+            const result = await showCustomPrompt({ title: 'Dimension Label', fields: [{ id: 'label', label: 'Enter label for the dimension:' }] });
+            const endPoint = { x: pointer.x, y: pointer.y }; // Allow freehand end point
+            if (result) { // Only create if user doesn't cancel
+                createDimension(dimensionStartPoint, endPoint, result.label);
             }
             // Cleanup and exit dimension mode
             canvas.remove(tempLine);
@@ -382,6 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isDimensionMode = false;
             canvas.defaultCursor = 'default';
             canvas.selection = true;
+            if (infoBox) infoBox.style.display = 'none'; // Hide info box on completion
             canvas.forEachObject(obj => obj.set('selectable', true));
             canvas.renderAll();
         }
@@ -392,27 +510,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     canvas.on('mouse:move', (o) => {
         const pointer = canvas.getPointer(o.e);
-        if (isDimensionMode && dimensionStartPoint && tempLine) {
-            tempLine.set({ x2: pointer.x, y2: dimensionStartPoint.y });
+        if (isDimensionMode && dimensionStartPoint && tempLine && !isTextEditing) {
+            tempLine.set({ x2: pointer.x, y2: pointer.y }); // Allow freehand movement
+
+            // Update info box for dimension mode
+            const length = Math.sqrt(Math.pow(pointer.x - dimensionStartPoint.x, 2) + Math.pow(pointer.y - dimensionStartPoint.y, 2));
+            const horizontalAngleRad = Math.atan2(-(pointer.y - dimensionStartPoint.y), pointer.x - dimensionStartPoint.x);
+            let horizontalAngleDeg = fabric.util.radiansToDegrees(horizontalAngleRad);
+            if (horizontalAngleDeg < 0) horizontalAngleDeg += 360; // Normalize to 0-360
+
+            let infoText = `L: ${length.toFixed(1)}<br>Abs ∠: ${horizontalAngleDeg.toFixed(1)}°`;
+            infoText += `<br>---<br>Tab for precise input`;
+
+            infoBox.innerHTML = infoText;
+            infoBox.style.display = 'block';
+            infoBox.style.left = `${o.e.clientX + 15}px`;
+            infoBox.style.top = `${o.e.clientY + 15}px`;
+
             canvas.renderAll();
         } else if (isPolygonMode && polygonPoints.length > 0) {
+            // Existing polygon info box logic
+            // ... (no changes here, as it's already working)
+            // The rest of the polygon mouse:move logic remains the same
             const lastPoint = polygonPoints[polygonPoints.length - 1];
             if (tempFollowLine) canvas.remove(tempFollowLine);
             tempFollowLine = new fabric.Line([lastPoint.x, lastPoint.y, pointer.x, pointer.y], { stroke: '#aaa', strokeWidth: 2, strokeDashArray: [5, 5], selectable: false, evented: false });
             canvas.add(tempFollowLine);
 
-            // --- NEW INFO BOX LOGIC ---
-            // 1. Calculate length
             const length = Math.sqrt(Math.pow(pointer.x - lastPoint.x, 2) + Math.pow(pointer.y - lastPoint.y, 2));
-
-            // 2. Calculate horizontal angle (adjusting for screen coordinates where Y is inverted)
             const horizontalAngleRad = Math.atan2(-(pointer.y - lastPoint.y), pointer.x - lastPoint.x);
             let horizontalAngleDeg = fabric.util.radiansToDegrees(horizontalAngleRad);
-            if (horizontalAngleDeg < 0) horizontalAngleDeg += 360; // Normalize to 0-360
+            if (horizontalAngleDeg < 0) horizontalAngleDeg += 360;
 
             let infoText = `L: ${length.toFixed(1)}<br>Abs ∠: ${horizontalAngleDeg.toFixed(1)}°`;
 
-            // 3. Calculate relative angle if there's a previous segment
             if (polygonPoints.length > 1) {
                 const prevPoint = polygonPoints[polygonPoints.length - 2];
                 const v1 = { x: prevPoint.x - lastPoint.x, y: prevPoint.y - lastPoint.y };
@@ -424,7 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (mag1 > 0 && mag2 > 0) {
                     const cosAngle = dotProduct / (mag1 * mag2);
-                    const clampedCos = Math.max(-1, Math.min(1, cosAngle)); // Clamp to avoid floating point errors with acos
+                    const clampedCos = Math.max(-1, Math.min(1, cosAngle));
                     const relativeAngleRad = Math.acos(clampedCos);
                     const relativeAngleDeg = fabric.util.radiansToDegrees(relativeAngleRad);
                     infoText += `<br>Rel ∠: ${relativeAngleDeg.toFixed(1)}°`;
@@ -444,14 +575,97 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('keydown', function(e) {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (isTextEditing) {
-                return;
+    async function addPreciseDimensionSegment() {
+        if (!isDimensionMode || !dimensionStartPoint) return;
+
+        const result = await showCustomPrompt({
+            title: 'Add Precise Dimension',
+            fields: [
+                { id: 'segment', label: 'Length, Angle (0=right, 90=up):', placeholder: 'e.g., 150, 30' },
+                { id: 'label', label: 'Label for dimension:' }
+            ]
+        });
+
+        if (result && result.segment) {
+            const parts = result.segment.split(',').map(s => parseFloat(s.trim()));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                const [length, angleDeg] = parts;
+                const angleRad = fabric.util.degreesToRadians(angleDeg);
+                
+                // Calculate end point based on start point, length, and angle
+                const endX = dimensionStartPoint.x + length * Math.cos(angleRad);
+                const endY = dimensionStartPoint.y - length * Math.sin(angleRad); // Invert Y for screen coordinates
+                
+                createDimension(dimensionStartPoint, { x: endX, y: endY }, result.label || '');
+
+                // Cleanup and exit dimension mode
+                canvas.remove(tempLine);
+                tempLine = null;
+                dimensionStartPoint = null;
+                isDimensionMode = false;
+                canvas.defaultCursor = 'default';
+                canvas.selection = true;
+                if (infoBox) infoBox.style.display = 'none';
+                canvas.forEachObject(obj => obj.set('selectable', true));
+                canvas.renderAll();
+            } else {
+                alert("Invalid format. Please use 'length, angle'.");
             }
+        } else {
+            // User cancelled, reset dimension mode
+            canvas.remove(tempLine);
+            tempLine = null;
+            dimensionStartPoint = null;
+            isDimensionMode = false;
+            canvas.defaultCursor = 'default';
+            canvas.selection = true;
+            if (infoBox) infoBox.style.display = 'none';
+            canvas.forEachObject(obj => obj.set('selectable', true));
+            canvas.renderAll();
+        }
+    }
+
+    // Main keyboard event listener
+    window.addEventListener('keydown', async (e) => {
+        if (!modalOverlay.classList.contains('hidden')) {
+            // Modal is active, let its own handlers do the work.
+            return;
+        }
+
+        const isCtrlCmd = e.ctrlKey || e.metaKey; // metaKey for Cmd on Mac
+
+        // Handle native browser copy/paste/cut within text fields
+        if (isTextEditing) {
+            if (isCtrlCmd && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                return; // Allow native browser behavior
+            }
+        }
+
+        // --- Global Shortcuts (Copy, Paste, Cut, Delete) ---
+        if (isCtrlCmd && e.key === 'c') {
+            e.preventDefault();
+            copyActiveObject();
+            return;
+        }
+        if (isCtrlCmd && e.key === 'v') {
+            e.preventDefault();
+            pasteObject();
+            return;
+        }
+        if (isCtrlCmd && e.key === 'x') {
+            e.preventDefault();
+            cutActiveObject();
+            return;
+        }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (isTextEditing) return; // Don't delete objects if typing text
             e.preventDefault();
             deleteActiveObject();
-        } else if (isPolygonMode) {
+            return;
+        }
+
+        // --- Mode-Specific Shortcuts ---
+        if (isPolygonMode) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (polygonPoints.length >= 3) createPolygonFromPoints();
@@ -460,45 +674,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetPolygonMode();
             } else if (e.key === 'Tab') {
                 e.preventDefault();
-                // Hide the info box while the prompt is open to prevent overlap
                 if (infoBox) infoBox.style.display = 'none';
-                addPreciseSegment();
+                await addPreciseSegment();
+            }
+        } else if (isDimensionMode) {
+            if (e.key === 'Tab' && dimensionStartPoint) {
+                e.preventDefault();
+                if (infoBox) infoBox.style.display = 'none';
+                await addPreciseDimensionSegment();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                // Cleanup and exit dimension mode
+                canvas.remove(tempLine);
+                tempLine = null;
+                dimensionStartPoint = null;
+                isDimensionMode = false;
+                canvas.defaultCursor = 'default';
+                canvas.selection = true;
+                if (infoBox) infoBox.style.display = 'none';
+                canvas.forEachObject(obj => obj.set('selectable', true));
+                canvas.renderAll();
             }
         }
     });
 
     const latexButtons = document.querySelectorAll('.latex-btn');
     latexButtons.forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const template = button.getAttribute('data-template');
             let latexString = '';
+            let result;
+
             if (template === 'fraction') {
-                const num = prompt('Enter numerator:');
-                const den = prompt('Enter denominator:');
-                if (num !== null && den !== null) {
-                    latexString = `\\frac{${num}}{${den}}`;
+                result = await showCustomPrompt({ title: 'Create Fraction', fields: [
+                    { id: 'num', label: 'Numerator:' }, { id: 'den', label: 'Denominator:' }
+                ]});
+                if (result) {
+                    latexString = `\\frac{${result.num}}{${result.den}}`;
                 }
             } else if (template === 'sqrt') {
-                const content = prompt('Enter content of square root:');
-                if (content !== null) {
-                    latexString = `\\sqrt{${content}}`;
+                result = await showCustomPrompt({ title: 'Create Square Root', fields: [{ id: 'content', label: 'Content:' }] });
+                if (result) {
+                    latexString = `\\sqrt{${result.content}}`;
                 }
             } else if (template === 'power') {
-                const base = prompt('Enter base:');
-                const exp = prompt('Enter exponent:');
-                if (base !== null && exp !== null) {
-                    latexString = `${base}^{${exp}}`;
-                }
-            } else if (template === 'integral') {
-                const from = prompt('Enter the lower limit (from):');
-                const to = prompt('Enter the upper limit (to):');
-                const func = prompt('Enter the function (e.g., x dx):');
-                if (from !== null && to !== null && func !== null) {
-                    latexString = `\\int_{${from}}^{${to}} ${func}`;
+                result = await showCustomPrompt({ title: 'Create Exponent', fields: [
+                    { id: 'base', label: 'Base:' }, { id: 'exp', label: 'Exponent:' }
+                ]});
+                if (result) {
+                    latexString = `${result.base}^{${result.exp}}`;
                 }
             }
             renderLatex(latexString);
         });
+    });
+
+    const customLatexBtn = document.getElementById('custom-latex-btn');
+    customLatexBtn.addEventListener('click', async () => {
+        const result = await showCustomPrompt({
+            title: 'Custom LaTeX Input',
+            fields: [{
+                id: 'latex',
+                label: 'Enter your LaTeX expression:',
+                placeholder: 'e.g., \\sum_{i=0}^n i^2'
+            }]
+        });
+
+        if (result && result.latex) {
+            renderLatex(result.latex);
+        }
     });
 
     function deleteActiveObject() {
@@ -522,7 +766,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportButton = document.getElementById('export-jpeg');
     exportButton.addEventListener('click', () => {
         const link = document.createElement('a');
-        link.href = canvas.toDataURL({ format: 'jpeg', quality: 0.9 });
+        // Increase resolution with a multiplier and set quality to maximum for a sharper image.
+        link.href = canvas.toDataURL({
+            format: 'jpeg',
+            quality: 1.0, // Use maximum quality to reduce graininess
+            multiplier: 2 // Render at 2x resolution to reduce blurriness
+        });
         link.download = 'my-creation.jpeg';
         link.click();
     });
