@@ -11,8 +11,7 @@
 <body>
 
     <div class="main-container">
-        <div class="toolbox">
-            <h2>Toolbox</h2>
+        <div class="toolbox"><h2>Toolbox</h2>
             <div class="prop-group">
                 <label for="unit-selector">Units:</label>
                 <select id="unit-selector">
@@ -21,7 +20,7 @@
                     <option value="cm">Centimeters (cm)</option>
                 </select>
             </div>
-            <button id="export-jpeg">Export as JPEG</button>
+         <button id="export-jpeg">Export as JPEG</button>
             <hr>
             <h3>Visual Tools</h3>
             <button id="add-polygon-btn">Add Polygon (Freehand)</button>
@@ -54,31 +53,36 @@
             <button class="latex-btn" data-template="sqrt">Square Root</button>
             <button class="latex-btn" data-template="power">Exponent</button>
             <button id="custom-latex-btn">Custom LaTeX</button>
+            <hr>
+            <h3>Settings</h3>
+            <div class="input-group">
+                <label><input type="checkbox" id="snap-to-grid-toggle"> Snap to Grid</label>
+                <label><input type="checkbox" id="show-grid-toggle"> Show Grid</label>
+            </div>
         </div>
-
         <div class="left-column">
             <h1>Visual Math Editor</h1>
             <div class="canvas-container">
                 <canvas id="editor-canvas" width="800" height="600"></canvas>
             </div>
         </div>
-
-        <div id="properties-panel" class="properties-panel hidden">
+        <div id="properties-panel" class="properties-panel">
             <h3>Properties</h3>
-            <div id="properties-content"></div>
-        </div>
+         <div id="properties-content"></div>
+      </div>
     </div>
 
     <div id="custom-modal-overlay" class="modal-overlay hidden">
         <div id="custom-modal" class="modal-container">
             <h3 id="modal-title">Input Required</h3>
-            <div id="modal-content" class="modal-content">
-                <!-- Input fields will be generated here by JavaScript -->
-            </div>
+         <div id="modal-content" class="modal-content">
+            <!-- Input fields will be generated here by JavaScript -->
+         </div>
             <div class="modal-actions">
                 <button id="modal-cancel-btn">Cancel</button>
                 <button id="modal-ok-btn">OK</button>
             </div>
+
         </div>
     </div>
 

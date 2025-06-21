@@ -11,8 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPolygonMode = false;
     let polygonPoints = [];
     let tempPolygonLines = [];
+    let isSnapToGridEnabled = false;
+    const gridSize = 20; // Define your grid size in pixels
     let tempFollowLine = null;
-    let clipboard = null; // To store copied objects
+    let gridLines = [];
+    let clipboard = null;
+    const CUSTOM_PROPERTIES = ['custom_type', 'initialRadius', 'sides', 'angleDeg', 'alt'];
 
     const propertiesPanel = document.getElementById('properties-panel');
     const propertiesContent = document.getElementById('properties-content');
@@ -52,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         activeObject.clone(function(clonedObj) {
             clipboard = clonedObj;
-        });
+        }, CUSTOM_PROPERTIES);
     }
 
     function pasteObject() {
@@ -82,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvas.setActiveObject(clonedObj);
             }
             canvas.renderAll();
-        });
+        }, CUSTOM_PROPERTIES);
     }
 
     function cutActiveObject() {
@@ -528,21 +532,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return polygon.points.map(p => fabric.util.transformPoint(p, matrix));
     }
 
-    function hidePropertiesPanel() {
-        propertiesPanel.classList.add('hidden');
-        propertiesContent.innerHTML = '';
+    function showPropertiesPlaceholder() {
+        propertiesPanel.classList.remove('hidden');
+        propertiesContent.innerHTML = `<p class="placeholder-text">Select an object on the canvas to view its properties.</p>`;
     }
 
-    function createPropertyRow(label, value, propertyName = null, object = null) {
+    showPropertiesPlaceholder();
+
+    function createPropertyRow(label, value, propertyName = null, object = null, type = 'text') {
         const row = document.createElement('div');
         row.className = 'prop-group';
         const input = document.createElement('input');
-        input.type = 'text'; // Use text to display units like 'px'
+        input.type = type;
         input.value = value;
         
         if (propertyName && object) {
             input.dataset.property = propertyName;
-            input.addEventListener('change', (e) => handlePropertyChange(e, object));
+
+            const eventType = (type === 'color') ? 'input' : 'change';
+            input.addEventListener(eventType, (e) => {
+                if (type === 'text') {
+                    handlePropertyChange(e, object);
+                } else { // For color, etc.
+                    object.set(propertyName, e.target.value);
+                    canvas.renderAll();
+                }
+            });
         } else {
             input.disabled = true;
         }
@@ -566,6 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
         createPropertyRow(`Radius (${unitInfo.label})`, radius_units.toFixed(2), 'radius', circle);
         createPropertyRow(`Circumference (${unitInfo.label})`, circumference_units.toFixed(2), 'circumference', circle);
         createPropertyRow(`Area (${unitInfo.areaLabel})`, area_units.toFixed(2), 'area', circle);
+        createPropertyRow('Fill Color', circle.get('fill'), 'fill', circle, 'color');
+        createPropertyRow('Stroke Color', circle.get('stroke'), 'stroke', circle, 'color');
     }
 
     function populateNgonProperties(ngon) {
@@ -582,6 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
         createPropertyRow(`Side Length (${unitInfo.label})`, (sideLength_px / conversionFactor).toFixed(2), 'sideLength', ngon);
         createPropertyRow(`Area (${unitInfo.areaLabel})`, (area_px / (conversionFactor * conversionFactor)).toFixed(2), 'area', ngon);
         createPropertyRow(`Circumradius (${unitInfo.label})`, (scaledRadius_px / conversionFactor).toFixed(2), 'circumradius', ngon);
+        createPropertyRow('Fill Color', ngon.get('fill'), 'fill', ngon, 'color');
+        createPropertyRow('Stroke Color', ngon.get('stroke'), 'stroke', ngon, 'color');
     }
 
     function populateWedgeProperties(wedge) {
@@ -597,6 +616,8 @@ document.addEventListener('DOMContentLoaded', () => {
         createPropertyRow('Angle (°)', wedge.angleDeg.toFixed(2), null, wedge);
         createPropertyRow(`Arc Length (${unitInfo.label})`, (arcLength_px / conversionFactor).toFixed(2), 'arcLength', wedge);
         createPropertyRow(`Area (${unitInfo.areaLabel})`, (area_px / (conversionFactor * conversionFactor)).toFixed(2), 'area', wedge);
+        createPropertyRow('Fill Color', wedge.get('fill'), 'fill', wedge, 'color');
+        createPropertyRow('Stroke Color', wedge.get('stroke'), 'stroke', wedge, 'color');
     }
 
     // Helper to calculate interior angle at a vertex
@@ -642,14 +663,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const interiorAngleDeg = calculateInteriorAngle(p_prev, p1, p2);
             createPropertyRow(`Vertex ${i + 1} Angle (°)`, interiorAngleDeg.toFixed(2), null, polygon);
         });
+        createPropertyRow('Fill Color', polygon.get('fill'), 'fill', polygon, 'color');
+        createPropertyRow('Stroke Color', polygon.get('stroke'), 'stroke', polygon, 'color');
     }
 
-    function updatePropertiesPanel(e) {
-        const activeObject = e.target;
+    function updatePropertiesPanel() {
+        const activeObject = canvas.getActiveObject();
         propertiesContent.innerHTML = '';
-        propertiesPanel.classList.add('hidden');
 
-        if (!activeObject || activeObject.group || activeObject.type === 'activeSelection') return;
+        if (!activeObject || activeObject.type === 'activeSelection') {
+            showPropertiesPlaceholder();
+            return;
+        }
 
         const type = activeObject.custom_type || activeObject.type;
 
@@ -673,7 +698,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'FreehandPolygon':
                 populateFreehandPolygonProperties(activeObject, 'Polygon');
                 break;
-            default: return;
+            // Groups and other unhandled types will fall through
+            default:
+                showPropertiesPlaceholder();
+                return;
         }
         propertiesPanel.classList.remove('hidden');
     }
@@ -723,31 +751,24 @@ document.addEventListener('DOMContentLoaded', () => {
             obj.scale(obj.scaleX * scaleFactor).setCoords();
             canvas.renderAll();
             // After scaling, refresh the properties panel to update all values
-            updatePropertiesPanel({ target: obj });
+            updatePropertiesPanel();
         } else {
             // If input was invalid or resulted in no change, revert to original value
-            updatePropertiesPanel({ target: obj });
+            updatePropertiesPanel();
         }
     }
 
     unitSelector.addEventListener('change', (e) => {
         currentUnit = e.target.value;
         const activeObject = canvas.getActiveObject();
-        if (activeObject) {
-            // Re-trigger the properties panel update to reflect the new units
-            updatePropertiesPanel({ target: activeObject });
-        }
+        if (activeObject) { updatePropertiesPanel(); }
     });
 
     canvas.on({
         'selection:created': updatePropertiesPanel,
         'selection:updated': updatePropertiesPanel,
-        'selection:cleared': hidePropertiesPanel,
-        'object:modified': (e) => {
-            if (e.target === canvas.getActiveObject()) {
-                updatePropertiesPanel(e);
-            }
-        }
+        'selection:cleared': showPropertiesPlaceholder,
+        'object:modified': updatePropertiesPanel
     });
 
     const tapeDiagramBtn = document.getElementById('tape-diagram-btn');
@@ -1063,6 +1084,31 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // --- Arrow Key Movement ---
+        const activeObject = canvas.getActiveObject();
+        if (activeObject && !isTextEditing && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+            const moveAmount = isSnapToGridEnabled ? gridSize : 1;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    activeObject.left -= moveAmount;
+                    break;
+                case 'ArrowRight':
+                    activeObject.left += moveAmount;
+                    break;
+                case 'ArrowUp':
+                    activeObject.top -= moveAmount;
+                    break;
+                case 'ArrowDown':
+                    activeObject.top += moveAmount;
+                    break;
+            }
+            activeObject.setCoords();
+            canvas.renderAll();
+            return;
+        }
+
         // --- Mode-Specific Shortcuts ---
         if (isPolygonMode) {
             if (e.key === 'Enter') {
@@ -1158,6 +1204,67 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.renderAll();
         }
     }
+
+    function drawGrid() {
+        clearGrid(); // Clear any existing grid first
+        const canvasWidth = canvas.getWidth();
+        const canvasHeight = canvas.getHeight();
+        const strokeColor = '#e0e0e0'; // A light gray for the grid
+
+        // Draw vertical lines
+        for (let i = 1; i < canvasWidth / gridSize; i++) {
+            const line = new fabric.Line([i * gridSize, 0, i * gridSize, canvasHeight], {
+                stroke: strokeColor,
+                selectable: false,
+                evented: false,
+            });
+            canvas.add(line);
+            line.sendToBack();
+            gridLines.push(line);
+        }
+
+        // Draw horizontal lines
+        for (let i = 1; i < canvasHeight / gridSize; i++) {
+            const line = new fabric.Line([0, i * gridSize, canvasWidth, i * gridSize], {
+                stroke: strokeColor,
+                selectable: false,
+                evented: false,
+            });
+            canvas.add(line);
+            line.sendToBack();
+            gridLines.push(line);
+        }
+        canvas.renderAll();
+    }
+
+    function clearGrid() {
+        gridLines.forEach(line => canvas.remove(line));
+        gridLines = [];
+        canvas.renderAll();
+    }
+
+    const snapToGridToggle = document.getElementById('snap-to-grid-toggle');
+    snapToGridToggle.addEventListener('change', (e) => {
+        isSnapToGridEnabled = e.target.checked;
+    });
+
+    const showGridToggle = document.getElementById('show-grid-toggle');
+    showGridToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            drawGrid();
+        } else {
+            clearGrid();
+        }
+    });
+
+    canvas.on('object:moving', (options) => {
+        if (isSnapToGridEnabled) {
+            options.target.set({
+                left: Math.round(options.target.left / gridSize) * gridSize,
+                top: Math.round(options.target.top / gridSize) * gridSize
+            });
+        }
+    });
 
     const exportButton = document.getElementById('export-jpeg');
     exportButton.addEventListener('click', () => {
