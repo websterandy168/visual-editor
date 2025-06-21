@@ -10,24 +10,31 @@
 </head>
 <body>
 
-    <h1>Visual Math Editor</h1>
-
     <div class="main-container">
         <div class="toolbox">
             <h2>Toolbox</h2>
-
+            <div class="prop-group">
+                <label for="unit-selector">Units:</label>
+                <select id="unit-selector">
+                    <option value="px">Pixels (px)</option>
+                    <option value="in">Inches (in)</option>
+                    <option value="cm">Centimeters (cm)</option>
+                </select>
+            </div>
+            <button id="export-jpeg">Export as JPEG</button>
+            <hr>
             <h3>Visual Tools</h3>
             <button id="add-polygon-btn">Add Polygon (Freehand)</button>
             <button id="tape-diagram-btn">Tape Diagram</button>
             <button id="add-dimension-btn">Add Dimension</button>
-            <button id="add-wedge-btn">Add Arc/Wedge</button>            
+            <button id="add-wedge-btn">Add Arc/Wedge</button>
             <div class="input-group-row">
                 <label for="ngon-sides">N-gon:</label>
                 <select id="ngon-sides">
                     <option value="3">Triangle</option>
                     <option value="4">Square</option>
                     <option value="5">Pentagon</option>
-                    <option value="6">Hexagon</option>                    
+                    <option value="6">Hexagon</option>
                     <option value="8">Octagon</option>
                 </select>
                 <button id="add-ngon-btn" class="small-btn">Add</button>
@@ -40,7 +47,6 @@
                 <label for="image-loader">Add Image:</label>
                 <input type="file" id="image-loader" accept="image/*">
             </div>
-
             <hr>
             <h3>Text & Math</h3>
             <button id="add-text">Add Text</button>
@@ -48,28 +54,17 @@
             <button class="latex-btn" data-template="sqrt">Square Root</button>
             <button class="latex-btn" data-template="power">Exponent</button>
             <button id="custom-latex-btn">Custom LaTeX</button>
-            
-            <hr>
-            <h3>Actions</h3>
-            <button id="delete-btn">Delete Selected</button>
-            <button id="export-jpeg">Export as JPEG</button>
         </div>
 
-        <div class="canvas-container">
-            <canvas id="editor-canvas" width="800" height="600"></canvas>
+        <div class="left-column">
+            <h1>Visual Math Editor</h1>
+            <div class="canvas-container">
+                <canvas id="editor-canvas" width="800" height="600"></canvas>
+            </div>
         </div>
 
         <div id="properties-panel" class="properties-panel hidden">
             <h3>Properties</h3>
-            <div class="prop-group">
-                <label for="unit-selector">Units:</label>
-                <select id="unit-selector">
-                    <option value="px">Pixels (px)</option>
-                    <option value="in">Inches (in)</option>
-                    <option value="cm">Centimeters (cm)</option>
-                </select>
-            </div>
-            <hr class="prop-hr">
             <div id="properties-content"></div>
         </div>
     </div>

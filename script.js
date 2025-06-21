@@ -363,25 +363,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addTriangleBtn = document.getElementById('add-triangle-btn');
     addTriangleBtn.addEventListener('click', async () => {
+        const unitInfo = units[currentUnit];
         const result = await showCustomPrompt({ title: 'Create Triangle', fields: [
-            { id: 'side1', label: 'Side 1 (px):', type: 'number' },
-            { id: 'side2', label: 'Side 2 (px):', type: 'number' },
-            { id: 'side3', label: 'Side 3 (px):', type: 'number' }
+            { id: 'side1', label: `Side 1 (${unitInfo.label}):`, type: 'number' },
+            { id: 'side2', label: `Side 2 (${unitInfo.label}):`, type: 'number' },
+            { id: 'side3', label: `Side 3 (${unitInfo.label}):`, type: 'number' }
         ]});
         if (result && result.side1 && result.side2 && result.side3) {
-            createTriangle(parseFloat(result.side1), parseFloat(result.side2), parseFloat(result.side3));
+            const conversionFactor = unitInfo.factor;
+            createTriangle(
+                parseFloat(result.side1) * conversionFactor,
+                parseFloat(result.side2) * conversionFactor,
+                parseFloat(result.side3) * conversionFactor
+            );
         }
     });
 
     const addParallelogramBtn = document.getElementById('add-parallelogram-btn');
     addParallelogramBtn.addEventListener('click', async () => {
+        const unitInfo = units[currentUnit];
         const result = await showCustomPrompt({ title: 'Create Parallelogram', fields: [
-            { id: 'side1', label: 'Side 1 (px):', type: 'number' },
-            { id: 'side2', label: 'Side 2 (px):', type: 'number' },
+            { id: 'side1', label: `Side 1 (${unitInfo.label}):`, type: 'number' },
+            { id: 'side2', label: `Side 2 (${unitInfo.label}):`, type: 'number' },
             { id: 'angle', label: 'Angle (degrees):', type: 'number' }
         ]});
         if (result && result.side1 && result.side2 && result.angle) {
-            createParallelogram(parseFloat(result.side1), parseFloat(result.side2), parseFloat(result.angle));
+            const conversionFactor = unitInfo.factor;
+            createParallelogram(
+                parseFloat(result.side1) * conversionFactor,
+                parseFloat(result.side2) * conversionFactor,
+                parseFloat(result.angle)
+            );
         }
     });
 
@@ -490,12 +502,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function addPreciseSegment() {
         if (!isPolygonMode || polygonPoints.length < 1) return;
-        const result = await showCustomPrompt({ title: 'Add Precise Segment', fields: [{ id: 'segment', label: 'Length, Angle', placeholder: 'e.g., 100, 45' }] });
+        const unitInfo = units[currentUnit];
+        const result = await showCustomPrompt({ title: 'Add Precise Segment', fields: [{
+            id: 'segment',
+            label: `Length (${unitInfo.label}), Angle`,
+            placeholder: `e.g., ${(100 / unitInfo.factor).toFixed(1)}, 45`
+        }] });
 
         if (result && result.segment) {
             const parts = result.segment.split(',').map(s => parseFloat(s.trim()));
             if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                const [length, angleDeg] = parts;
+                let [length, angleDeg] = parts;
+                length *= unitInfo.factor; // Convert length to pixels
                 const angleRad = fabric.util.degreesToRadians(angleDeg);
                 const lastPoint = polygonPoints[polygonPoints.length - 1];
                 // Calculate next point based on math angle (0=right, 90=up), inverting Y for screen coordinates
@@ -840,12 +858,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addWedgeBtn = document.getElementById('add-wedge-btn');
     addWedgeBtn.addEventListener('click', async () => {
+        const unitInfo = units[currentUnit];
         const result = await showCustomPrompt({ title: 'Create Arc/Wedge', fields: [
-            { id: 'radius', label: 'Radius (px):', type: 'number', value: 100 },
+            { id: 'radius', label: `Radius (${unitInfo.label}):`, type: 'number', value: (100 / unitInfo.factor).toFixed(2) },
             { id: 'angle', label: 'Angle (degrees):', type: 'number', value: 90 }
         ]});
         if (result && result.radius && result.angle) {
-            createWedge(parseFloat(result.radius), parseFloat(result.angle));
+            const conversionFactor = unitInfo.factor;
+            createWedge(parseFloat(result.radius) * conversionFactor, parseFloat(result.angle));
         }
     });
 
@@ -955,11 +975,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function addPreciseDimensionSegment() {
         if (!isDimensionMode || !dimensionStartPoint) return;
-
+        const unitInfo = units[currentUnit];
         const result = await showCustomPrompt({
             title: 'Add Precise Dimension',
             fields: [
-                { id: 'segment', label: 'Length, Angle (0=right, 90=up):', placeholder: 'e.g., 150, 30' },
+                { id: 'segment', label: `Length (${unitInfo.label}), Angle (0=right, 90=up):`, placeholder: `e.g., ${(150 / unitInfo.factor).toFixed(1)}, 30` },
                 { id: 'label', label: 'Label for dimension:' }
             ]
         });
@@ -967,7 +987,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result && result.segment) {
             const parts = result.segment.split(',').map(s => parseFloat(s.trim()));
             if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                const [length, angleDeg] = parts;
+                let [length, angleDeg] = parts;
+                length *= unitInfo.factor; // Convert length to pixels
                 const angleRad = fabric.util.degreesToRadians(angleDeg);
                 
                 // Calculate end point based on start point, length, and angle
@@ -1137,9 +1158,6 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.renderAll();
         }
     }
-
-    const deleteBtn = document.getElementById('delete-btn');
-    deleteBtn.addEventListener('click', deleteActiveObject);
 
     const exportButton = document.getElementById('export-jpeg');
     exportButton.addEventListener('click', () => {

@@ -2,16 +2,17 @@ body {
     font-family: 'Roboto', sans-serif;
     background-color: #F5F7FA;
     color: #333333;
-    margin: 0; /* Remove default body margin */
-    padding: 20px; /* Consistent padding around the content */
+    margin: 0;
+    padding: 40px 20px; /* More vertical padding */
     line-height: 1.6; /* Improve readability of text blocks */
+    /* Revert to default block layout, removing centering */
 }
 h1, h2, h3 {
     text-align: center;
     color: #2C5B8A; /* Darker, higher-contrast blue */
     margin-bottom: 15px;
 }
-h1 { font-size: 2.8em; margin-top: 0; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); } /* Larger, bolder, subtle shadow */
+h1 { font-size: 2.8em; margin-top: 0; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); margin-bottom: 25px; } /* Adjust bottom margin */
 h2 { font-size: 2em; font-weight: 700; } /* Bolder section titles */
 h3 { font-size: 1.3em; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #E0E6ED; padding-bottom: 8px; font-weight: 700; color: #4A90E2; } /* Slightly larger, bolder, more prominent */
 
@@ -21,13 +22,18 @@ h3 { font-size: 1.3em; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px 
     margin-top: 20px;
     align-items: flex-start;
 }
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 .toolbox, .canvas-container, .properties-panel {
     background-color: #ffffff;
     padding: 25px; /* Increased padding for more breathing room */
     border-radius: 12px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.05); /* More refined, layered shadow */
 }
-.toolbox { width: 220px; display: flex; flex-direction: column; gap: 12px; }
+.toolbox { width: 240px; display: flex; flex-direction: column; gap: 12px; }
 .toolbox button {
     background-color: #337AB7; /* WCAG AA compliant blue */
     color: white; border: none; padding: 10px 15px; border-radius: 8px;
@@ -48,8 +54,6 @@ h3 { font-size: 1.3em; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px 
 }
 
 .input-group { display: flex; flex-direction: column; gap: 8px; } /* Increased gap for inputs */
-input[type="file"] { font-size: 14px; }
-.canvas-container { flex-grow: 1; }
 #editor-canvas { border: 1px solid #D1D9E6; border-radius: 12px; } /* Slightly darker border for canvas */
 
 .input-group-row {
@@ -58,7 +62,7 @@ input[type="file"] { font-size: 14px; }
     flex-wrap: wrap; /* Allow wrapping for smaller screens/more elements */
     gap: 5px;
 }
-.input-group-row select {
+.toolbox select {
     flex-grow: 1;
     padding: 8px; /* More padding */
     border-radius: 8px; /* More rounded */
@@ -78,23 +82,30 @@ input[type="file"] { font-size: 14px; }
 }
 
 .properties-panel {
-    width: 250px;
+    width: 300px; /* Make the panel wider */
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 .properties-panel.hidden { display: none; }
 .properties-panel h3 { margin-top: 0; color: #4A90E2; } /* Consistent heading color */
-#properties-content { display: flex; flex-direction: column; gap: 8px; max-height: 450px; overflow-y: auto; } /* Slightly reduced gap for density */
+.properties-content { display: flex; flex-direction: column; gap: 12px; max-height: 450px; overflow-y: auto; } /* Increased gap for better spacing */
 .prop-group { display: flex; justify-content: space-between; align-items: center; }
-.prop-group label { font-size: 14px; color: #555; }
+.prop-group label {
+    font-size: 15px; /* Larger label text */
+    color: #333; /* Darker for better contrast */
+    font-weight: bold; /* Make labels bold for clarity */
+}
 .prop-group input {
-    width: 70px;
+    width: 95px; /* Wider input for more space */
     padding: 8px; /* More padding */
     border: 1px solid #D1D9E6; /* Softer border */
     border-radius: 8px; /* More rounded */
     background-color: #FDFDFD;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    font-size: 15px; /* Larger text inside input */
+    color: #333333; /* Revert to high-contrast dark text for numbers */
+    font-weight: 500; /* Make numbers stand out with weight, not color */
 }
 .prop-group input:focus {
     outline: none;
