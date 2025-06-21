@@ -3,23 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual Equation Editor</title>
+    <title>Visual Math Editor</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Visual Equation Editor</h1>
+    <h1>Visual Math Editor</h1>
 
     <div class="main-container">
         <div class="toolbox">
             <h2>Toolbox</h2>
 
             <h3>Visual Tools</h3>
-            <button id="add-polygon-btn">Add Polygon</button>
+            <button id="add-polygon-btn">Add Polygon (Freehand)</button>
             <button id="tape-diagram-btn">Tape Diagram</button>
             <button id="add-dimension-btn">Add Dimension</button>
+            <button id="add-wedge-btn">Add Arc/Wedge</button>            
+            <div class="input-group-row">
+                <label for="ngon-sides">N-gon:</label>
+                <select id="ngon-sides">
+                    <option value="3">Triangle</option>
+                    <option value="4">Square</option>
+                    <option value="5">Pentagon</option>
+                    <option value="6">Hexagon</option>                    
+                    <option value="8">Octagon</option>
+                </select>
+                <button id="add-ngon-btn" class="small-btn">Add</button>
+            </div>
+            <div class="input-group-row">
+                <button id="add-triangle-btn" class="full-width-btn">Add Triangle</button>
+                <button id="add-parallelogram-btn" class="full-width-btn">Add Parallelogram</button>
+            </div>
             <div class="input-group">
                 <label for="image-loader">Add Image:</label>
                 <input type="file" id="image-loader" accept="image/*">
@@ -45,6 +61,15 @@
 
         <div id="properties-panel" class="properties-panel hidden">
             <h3>Properties</h3>
+            <div class="prop-group">
+                <label for="unit-selector">Units:</label>
+                <select id="unit-selector">
+                    <option value="px">Pixels (px)</option>
+                    <option value="in">Inches (in)</option>
+                    <option value="cm">Centimeters (cm)</option>
+                </select>
+            </div>
+            <hr class="prop-hr">
             <div id="properties-content"></div>
         </div>
     </div>

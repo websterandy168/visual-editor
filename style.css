@@ -1,65 +1,149 @@
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
-    margin: 0;
-    padding: 20px;
+    background-color: #F5F7FA;
+    color: #333333;
+    margin: 0; /* Remove default body margin */
+    padding: 20px; /* Consistent padding around the content */
+    line-height: 1.6; /* Improve readability of text blocks */
 }
-h1, h2, h3 { text-align: center; color: #1a237e; }
-.main-container { display: flex; gap: 20px; margin-top: 20px; }
-.toolbox { background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 220px; display: flex; flex-direction: column; gap: 15px; }
-.toolbox h3 { margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-.toolbox button { background-color: #3f51b5; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
-.toolbox button:hover { background-color: #303f9f; }
-#export-jpeg { background-color: #4CAF50; }
-#export-jpeg:hover { background-color: #45a049; }
-.input-group { display: flex; flex-direction: column; gap: 5px; }
+h1, h2, h3 {
+    text-align: center;
+    color: #2C5B8A; /* Darker, higher-contrast blue */
+    margin-bottom: 15px;
+}
+h1 { font-size: 2.8em; margin-top: 0; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); } /* Larger, bolder, subtle shadow */
+h2 { font-size: 2em; font-weight: 700; } /* Bolder section titles */
+h3 { font-size: 1.3em; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #E0E6ED; padding-bottom: 8px; font-weight: 700; color: #4A90E2; } /* Slightly larger, bolder, more prominent */
+
+.main-container {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    align-items: flex-start;
+}
+.toolbox, .canvas-container, .properties-panel {
+    background-color: #ffffff;
+    padding: 25px; /* Increased padding for more breathing room */
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.05); /* More refined, layered shadow */
+}
+.toolbox { width: 220px; display: flex; flex-direction: column; gap: 12px; }
+.toolbox button {
+    background-color: #337AB7; /* WCAG AA compliant blue */
+    color: white; border: none; padding: 10px 15px; border-radius: 8px;
+    cursor: pointer; font-size: 16px; transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+    letter-spacing: 0.5px; /* Slightly increased letter spacing for buttons */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2); /* Subtle text shadow for pop */
+}
+.toolbox button:hover { background-color: #286090; transform: translateY(-1px); } /* Darker hover state, subtle lift */
+/* Focus styles for keyboard navigation */
+.toolbox button:focus-visible,
+.input-group-row select:focus-visible,
+.input-group input[type="file"]:focus-visible,
+.prop-group input:focus-visible,
+.modal-actions button:focus-visible,
+#modal-content input:focus-visible { /* Apply focus styles to modal inputs */
+    outline: 3px solid #66B3FF;
+    outline-offset: 2px;
+}
+
+.input-group { display: flex; flex-direction: column; gap: 8px; } /* Increased gap for inputs */
 input[type="file"] { font-size: 14px; }
-.canvas-container { flex-grow: 1; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-#editor-canvas { border: 1px solid #ccc; border-radius: 8px; }
+.canvas-container { flex-grow: 1; }
+#editor-canvas { border: 1px solid #D1D9E6; border-radius: 12px; } /* Slightly darker border for canvas */
+
+.input-group-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping for smaller screens/more elements */
+    gap: 5px;
+}
+.input-group-row select {
+    flex-grow: 1;
+    padding: 8px; /* More padding */
+    border-radius: 8px; /* More rounded */
+    border: 1px solid #D1D9E6; /* Softer border */
+    background-color: #FDFDFD;
+    appearance: none; /* Remove default select arrow */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13.2-6.4H18.2c-4.8%200-9.3%201.8-13.2%206.4-3.9%204.6-6.4%2010.8-6.4%2017.6s2.5%2013%206.4%2017.6l128%20127.9c3.9%203.9%209.2%206.2%2013.2%206.2s9.3-2.3%2013.2-6.2l128-127.9c3.9-4.6%206.4-10.8%206.4-17.6-.1-6.8-2.6-13-6.5-17.6z%22%2F%3E%3C%2Fsvg%3E'); /* Custom arrow */
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+}
+
+.prop-hr {
+    border: none;
+    border-top: 1px solid #E0E6ED; /* Consistent divider color */
+    margin: 15px 0; /* More vertical space for dividers */
+}
 
 .properties-panel {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     width: 250px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
 }
 .properties-panel.hidden { display: none; }
-.properties-panel h3 { margin-top: 0; }
-#properties-content { display: flex; flex-direction: column; gap: 12px; max-height: 450px; overflow-y: auto; }
+.properties-panel h3 { margin-top: 0; color: #4A90E2; } /* Consistent heading color */
+#properties-content { display: flex; flex-direction: column; gap: 8px; max-height: 450px; overflow-y: auto; } /* Slightly reduced gap for density */
 .prop-group { display: flex; justify-content: space-between; align-items: center; }
 .prop-group label { font-size: 14px; color: #555; }
 .prop-group input {
     width: 70px;
-    padding: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 8px; /* More padding */
+    border: 1px solid #D1D9E6; /* Softer border */
+    border-radius: 8px; /* More rounded */
+    background-color: #FDFDFD;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+.prop-group input:focus {
+    outline: none;
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    background-color: #FFFFFF; /* Keep background white on focus */
+}
+
+.small-btn {
+    padding: 5px 10px !important;
+    font-size: 14px !important;
+    letter-spacing: normal; /* Override general button letter-spacing */
+    text-shadow: none; /* Override general button text-shadow */
+}
+
+.full-width-btn {
+    flex-grow: 1; /* Allow button to grow and fill available space */
+    text-align: center;
 }
 
 .info-box {
     position: absolute;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(40, 40, 40, 0.85);
     color: white;
     padding: 5px 10px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
     font-family: monospace;
-    pointer-events: none; /* So it doesn't interfere with mouse events on the canvas */
-    display: none; /* Hidden by default */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    backdrop-filter: blur(3px); /* Slightly more blur */
+    -webkit-backdrop-filter: blur(3px); /* For Safari */
+
+    pointer-events: none;
+    display: none;
     z-index: 1000;
 }
 
 #delete-btn {
-    background-color: #f44336; /* Red */
-    margin-bottom: 5px; /* Add a little space between buttons */
+    background-color: #C9302C;
+    margin-bottom: 5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2); /* Subtle text shadow for pop */
 }
 #delete-btn:hover {
-    background-color: #d32f2f;
+    background-color: #AC2925;
 }
+
+/* Export button specific styling */
+#export-jpeg { background-color: #398439; text-shadow: 0 1px 2px rgba(0,0,0,0.2); } /* Accent green, subtle text shadow */
+#export-jpeg:hover { background-color: #2D6A2D; }
 
 /* Modal Styles */
 .modal-overlay {
@@ -78,24 +162,35 @@ input[type="file"] { font-size: 14px; }
     display: none;
 }
 .modal-container {
-    background-color: white;
+    background-color: #ffffff;
     padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border-radius: 12px; /* Consistent rounded corners */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25); /* More prominent shadow */
     width: 90%;
     max-width: 400px;
+}
+.modal-container h3 { /* Style modal title */
+    color: #2C5B8A;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #E0E6ED;
+    padding-bottom: 8px;
 }
 .modal-content {
     margin: 20px 0;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px; /* Consistent gap */
 }
 .modal-input-group { display: flex; flex-direction: column; gap: 5px; }
 .modal-input-group label { font-weight: bold; color: #555; }
-.modal-input-group input { padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.modal-actions button { padding: 10px 20px; font-size: 16px; }
+#modal-content input {
+    padding: 10px; font-size: 16px; border: 1px solid #D1D9E6; border-radius: 8px;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+#modal-content input:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.modal-actions button { background-color: #337AB7; color: white; padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease-in-out; }
 #modal-cancel-btn {
     background-color: #757575;
 }

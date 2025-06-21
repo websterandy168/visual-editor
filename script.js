@@ -17,6 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const propertiesPanel = document.getElementById('properties-panel');
     const propertiesContent = document.getElementById('properties-content');
     const modalOverlay = document.getElementById('custom-modal-overlay');
+    const unitSelector = document.getElementById('unit-selector');
+
+    let currentUnit = 'px';
+    const DPI = 96; // A standard assumption for web
+    const units = {
+        px: { factor: 1, label: 'px', areaLabel: 'px²' },
+        in: { factor: DPI, label: 'in', areaLabel: 'in²' },
+        cm: { factor: DPI / 2.54, label: 'cm', areaLabel: 'cm²' }
+    };
     const modalTitle = document.getElementById('modal-title');
     const modalContent = document.getElementById('modal-content');
     const modalOkBtn = document.getElementById('modal-ok-btn');
@@ -163,12 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
     imageLoader.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const fileName = file.name; // Capture file name for alt text
         const reader = new FileReader();
         reader.onload = (f) => {
             const data = f.target.result;
             fabric.Image.fromURL(data, (img) => {
                 img.set({ left: 100, top: 100 });
                 img.scaleToWidth(200);
+                img.set({ alt: `User uploaded image: ${fileName}` }); // Add alt text for screen readers
                 canvas.add(img);
             });
         };
@@ -226,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dataUrl = canvasElement.toDataURL('image/png');
                 fabric.Image.fromURL(dataUrl, (img) => {
                     img.set({ left: 150, top: 150 });
+                    img.set({ alt: latexString }); // Add alt text for screen readers
                     img.scaleToWidth(80);
                     canvas.add(img);
                     canvas.setActiveObject(img);
@@ -277,12 +289,169 @@ document.addEventListener('DOMContentLoaded', () => {
             stroke: '#333',
             strokeWidth: 2,
             lockScalingFlip: true,
+            custom_type: 'FreehandPolygon',
         });
 
         canvas.add(polygon);
         canvas.setActiveObject(polygon);
         // Call resetPolygonMode to clean up temp lines AND the info box
         resetPolygonMode();
+    }
+
+    function createTriangle(side1, side2, side3) {
+        // Check if valid triangle (Triangle Inequality Theorem)
+        if (side1 + side2 <= side3 || side1 + side3 <= side2 || side2 + side3 <= side1) {
+            alert("Invalid triangle: The sum of any two sides must be greater than the third side.");
+            return null;
+        }
+        // Use side1 as the base, calculate the height
+        const semiPerimeter = (side1 + side2 + side3) / 2;
+        const area = Math.sqrt(semiPerimeter * (semiPerimeter - side1) * (semiPerimeter - side2) * (semiPerimeter - side3));
+        const height = (2 * area) / side1;
+
+        // Calculate x-coordinate of the third vertex using Pythagorean theorem
+        const x = (Math.pow(side1, 2) + Math.pow(side2, 2) - Math.pow(side3, 2)) / (2 * side1);
+
+        const points = [
+            { x: 0, y: 0 },
+            { x: side1, y: 0 },
+            { x: x, y: height }
+        ];
+
+        const triangle = new fabric.Polygon(points, {
+            left: 150,
+            top: 150,
+            fill: 'rgba(255, 200, 100, 0.5)',
+            stroke: '#333',
+            strokeWidth: 2,
+            lockScalingFlip: true,
+            custom_type: 'Triangle',
+        });
+        canvas.add(triangle);
+        canvas.setActiveObject(triangle);
+        canvas.renderAll();
+    }
+
+    function createParallelogram(side1, side2, angleDeg) {
+        // Ensure angle is within valid range
+        if (angleDeg <= 0 || angleDeg >= 180) {
+            alert("Angle must be between 0 and 180 degrees.");
+            return;
+        }
+        const angleRad = fabric.util.degreesToRadians(angleDeg);
+
+        const points = [
+            { x: 0, y: 0 },
+            { x: side1, y: 0 },
+            { x: side1 + side2 * Math.cos(Math.PI - angleRad), y: side2 * Math.sin(angleRad) },
+            { x: side2 * Math.cos(Math.PI - angleRad), y: side2 * Math.sin(angleRad) }
+        ];
+
+        const parallelogram = new fabric.Polygon(points, {
+            left: 150,
+            top: 150,
+            fill: 'rgba(200, 255, 200, 0.5)',
+            stroke: '#333',
+            strokeWidth: 2,
+            lockScalingFlip: true,
+            custom_type: 'Parallelogram',
+        });
+        canvas.add(parallelogram);
+        canvas.setActiveObject(parallelogram);
+        canvas.renderAll();
+    }
+
+    const addTriangleBtn = document.getElementById('add-triangle-btn');
+    addTriangleBtn.addEventListener('click', async () => {
+        const result = await showCustomPrompt({ title: 'Create Triangle', fields: [
+            { id: 'side1', label: 'Side 1 (px):', type: 'number' },
+            { id: 'side2', label: 'Side 2 (px):', type: 'number' },
+            { id: 'side3', label: 'Side 3 (px):', type: 'number' }
+        ]});
+        if (result && result.side1 && result.side2 && result.side3) {
+            createTriangle(parseFloat(result.side1), parseFloat(result.side2), parseFloat(result.side3));
+        }
+    });
+
+    const addParallelogramBtn = document.getElementById('add-parallelogram-btn');
+    addParallelogramBtn.addEventListener('click', async () => {
+        const result = await showCustomPrompt({ title: 'Create Parallelogram', fields: [
+            { id: 'side1', label: 'Side 1 (px):', type: 'number' },
+            { id: 'side2', label: 'Side 2 (px):', type: 'number' },
+            { id: 'angle', label: 'Angle (degrees):', type: 'number' }
+        ]});
+        if (result && result.side1 && result.side2 && result.angle) {
+            createParallelogram(parseFloat(result.side1), parseFloat(result.side2), parseFloat(result.angle));
+        }
+    });
+
+    function createNgon(sides, radius = 60) {
+        const points = [];
+        const angleStep = (Math.PI * 2) / sides;
+        // Start with the first point at the top for better visual orientation
+        const startAngle = -Math.PI / 2;
+
+        for (let i = 0; i < sides; i++) {
+            points.push({
+                x: radius * Math.cos(startAngle + i * angleStep),
+                y: radius * Math.sin(startAngle + i * angleStep)
+            });
+        }
+
+        const ngon = new fabric.Polygon(points, {
+            left: 150,
+            top: 150,
+            fill: 'rgba(100, 100, 255, 0.5)',
+            stroke: '#333',
+            strokeWidth: 2,
+            lockScalingFlip: true,
+            custom_type: 'Ngon',
+            sides: sides, // Store the number of sides here
+            initialRadius: radius,
+        });
+        canvas.add(ngon);
+        canvas.setActiveObject(ngon);
+        canvas.renderAll();
+    }
+
+    function createWedge(radius, angle) {
+        if (angle <= 0 || angle >= 360) {
+            // For a full circle, just create a circle object
+            const circle = new fabric.Circle({
+                radius: radius,
+                fill: 'rgba(100, 200, 100, 0.5)',
+                stroke: '#333',
+                strokeWidth: 2,
+                left: 150,
+                top: 150,
+                custom_type: 'Circle',
+            });
+            canvas.add(circle);
+            canvas.setActiveObject(circle);
+            return;
+        }
+
+        const angleRad = fabric.util.degreesToRadians(angle);
+        const largeArcFlag = angle > 180 ? 1 : 0;
+        const endX = radius * Math.cos(angleRad);
+        const endY = radius * Math.sin(angleRad);
+
+        // M 0,0 L radius,0 A radius,radius 0 largeArcFlag,1 endX,endY Z
+        const path = `M 0 0 L ${radius} 0 A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} z`;
+
+        const wedge = new fabric.Path(path, {
+            left: 150, top: 150,
+            fill: 'rgba(100, 200, 100, 0.5)',
+            stroke: '#333', strokeWidth: 2,
+            lockScalingFlip: true,
+            custom_type: 'Wedge',
+            initialRadius: radius,
+            angleDeg: angle,
+        });
+
+        canvas.add(wedge);
+        canvas.setActiveObject(wedge);
+        canvas.renderAll();
     }
 
     function addPolygonPoint(point) {
@@ -346,27 +515,221 @@ document.addEventListener('DOMContentLoaded', () => {
         propertiesContent.innerHTML = '';
     }
 
+    function createPropertyRow(label, value, propertyName = null, object = null) {
+        const row = document.createElement('div');
+        row.className = 'prop-group';
+        const input = document.createElement('input');
+        input.type = 'text'; // Use text to display units like 'px'
+        input.value = value;
+        
+        if (propertyName && object) {
+            input.dataset.property = propertyName;
+            input.addEventListener('change', (e) => handlePropertyChange(e, object));
+        } else {
+            input.disabled = true;
+        }
+
+        row.innerHTML = `<label>${label}</label>`;
+        row.appendChild(input);
+        propertiesContent.appendChild(row);
+    }
+
+    function populateCircleProperties(circle) {
+        const unitInfo = units[currentUnit];
+        const conversionFactor = unitInfo.factor;
+
+        const radius_px = circle.radius * circle.scaleX;
+        const radius_units = radius_px / conversionFactor;
+        const circumference_units = (2 * Math.PI * radius_px) / conversionFactor;
+        const area_px = Math.PI * Math.pow(radius_px, 2);
+        const area_units = area_px / (conversionFactor * conversionFactor);
+
+        createPropertyRow('Type', 'Circle', null, circle);
+        createPropertyRow(`Radius (${unitInfo.label})`, radius_units.toFixed(2), 'radius', circle);
+        createPropertyRow(`Circumference (${unitInfo.label})`, circumference_units.toFixed(2), 'circumference', circle);
+        createPropertyRow(`Area (${unitInfo.areaLabel})`, area_units.toFixed(2), 'area', circle);
+    }
+
+    function populateNgonProperties(ngon) {
+        const unitInfo = units[currentUnit];
+        const conversionFactor = unitInfo.factor;
+
+        const scaledRadius_px = ngon.initialRadius * ngon.scaleX;
+        const interiorAngleDeg = (ngon.sides - 2) * 180 / ngon.sides;
+        const sideLength_px = 2 * scaledRadius_px * Math.sin(Math.PI / ngon.sides);
+        const area_px = 0.5 * ngon.sides * Math.pow(scaledRadius_px, 2) * Math.sin((2 * Math.PI) / ngon.sides);
+
+        createPropertyRow('Type', `${ngon.sides}-gon`, null, ngon);
+        createPropertyRow('Interior Angle (°)', interiorAngleDeg.toFixed(2), null, ngon);
+        createPropertyRow(`Side Length (${unitInfo.label})`, (sideLength_px / conversionFactor).toFixed(2), 'sideLength', ngon);
+        createPropertyRow(`Area (${unitInfo.areaLabel})`, (area_px / (conversionFactor * conversionFactor)).toFixed(2), 'area', ngon);
+        createPropertyRow(`Circumradius (${unitInfo.label})`, (scaledRadius_px / conversionFactor).toFixed(2), 'circumradius', ngon);
+    }
+
+    function populateWedgeProperties(wedge) {
+        const unitInfo = units[currentUnit];
+        const conversionFactor = unitInfo.factor;
+
+        const scaledRadius_px = wedge.initialRadius * wedge.scaleX;
+        const area_px = Math.PI * Math.pow(scaledRadius_px, 2) * (wedge.angleDeg / 360);
+        const arcLength_px = 2 * Math.PI * scaledRadius_px * (wedge.angleDeg / 360);
+
+        createPropertyRow('Type', 'Wedge / Arc', null, wedge);
+        createPropertyRow(`Radius (${unitInfo.label})`, (scaledRadius_px / conversionFactor).toFixed(2), 'radius', wedge);
+        createPropertyRow('Angle (°)', wedge.angleDeg.toFixed(2), null, wedge);
+        createPropertyRow(`Arc Length (${unitInfo.label})`, (arcLength_px / conversionFactor).toFixed(2), 'arcLength', wedge);
+        createPropertyRow(`Area (${unitInfo.areaLabel})`, (area_px / (conversionFactor * conversionFactor)).toFixed(2), 'area', wedge);
+    }
+
+    // Helper to calculate interior angle at a vertex
+    function calculateInteriorAngle(p_prev, p_curr, p_next) {
+        const v1 = { x: p_prev.x - p_curr.x, y: p_prev.y - p_curr.y }; // Vector from p_curr to p_prev
+        const v2 = { x: p_next.x - p_curr.x, y: p_next.y - p_curr.y }; // Vector from p_curr to p_next
+
+        const dotProduct = v1.x * v2.x + v1.y * v2.y;
+
+        // Calculate magnitudes
+        const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+
+        // Avoid division by zero if a segment has zero length
+        if (mag1 === 0 || mag2 === 0) {
+            return 0; // Or handle as an error/invalid angle
+        }
+
+        // Calculate cosine of the angle
+        const cosAngle = dotProduct / (mag1 * mag2);
+
+        // Clamp cosAngle to [-1, 1] to avoid floating point errors with Math.acos
+        const clampedCos = Math.max(-1, Math.min(1, cosAngle));
+
+        // Calculate angle in radians (will be between 0 and PI) and convert to degrees
+        return fabric.util.radiansToDegrees(Math.acos(clampedCos));
+    }
+
+    function populateFreehandPolygonProperties(polygon, typeName = 'Polygon') {
+        const unitInfo = units[currentUnit];
+        const conversionFactor = unitInfo.factor;
+
+        createPropertyRow('Type', typeName, null, polygon);
+        const absPoints = getAbsolutePoints(polygon);
+        const numPoints = absPoints.length;
+        absPoints.forEach((p1, i) => {
+            const p2 = absPoints[(i + 1) % numPoints];
+            const length = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+            createPropertyRow(`Side ${i + 1} Len. (${unitInfo.label})`, (length / conversionFactor).toFixed(2), null, polygon); // Length of side starting at vertex i
+
+            // Calculate interior angle at vertex i
+            const p_prev = absPoints[(i - 1 + numPoints) % numPoints];
+            const interiorAngleDeg = calculateInteriorAngle(p_prev, p1, p2);
+            createPropertyRow(`Vertex ${i + 1} Angle (°)`, interiorAngleDeg.toFixed(2), null, polygon);
+        });
+    }
+
     function updatePropertiesPanel(e) {
         const activeObject = e.target;
-        // Only show for single selected polygons
-        if (activeObject && activeObject.type === 'polygon' && !activeObject.group) {
-            populatePolygonProperties(activeObject);
-            propertiesPanel.classList.remove('hidden');
+        propertiesContent.innerHTML = '';
+        propertiesPanel.classList.add('hidden');
+
+        if (!activeObject || activeObject.group || activeObject.type === 'activeSelection') return;
+
+        const type = activeObject.custom_type || activeObject.type;
+
+        switch (type) {
+            case 'Circle':
+            case 'circle':
+                populateCircleProperties(activeObject);
+                break;
+            case 'Ngon':
+                populateNgonProperties(activeObject);
+                break;
+            case 'Wedge':
+                populateWedgeProperties(activeObject);
+                break;
+            case 'Triangle':
+                populateFreehandPolygonProperties(activeObject, 'Triangle');
+                break;
+            case 'Parallelogram':
+                populateFreehandPolygonProperties(activeObject, 'Parallelogram');
+                break;
+            case 'FreehandPolygon':
+                populateFreehandPolygonProperties(activeObject, 'Polygon');
+                break;
+            default: return;
+        }
+        propertiesPanel.classList.remove('hidden');
+    }
+
+    function handlePropertyChange(e, obj) {
+        const input = e.target;
+        const property = input.dataset.property;
+        let newValue = parseFloat(input.value);
+
+        if (isNaN(newValue) || !obj) return;
+
+        const unitInfo = units[currentUnit];
+        const conversionFactor = unitInfo.factor;
+        let scaleFactor = 1;
+
+        // Convert input value from current units back to pixels
+        if (property === 'area') {
+            newValue *= (conversionFactor * conversionFactor); // Area is squared
         } else {
-            hidePropertiesPanel();
+            newValue *= conversionFactor; // Linear dimension
+        }
+
+        // Calculate the required scaling factor based on the property changed
+        const type = obj.custom_type || obj.type;
+        switch (type) {
+            case 'Circle':
+            case 'circle':
+                if (property === 'radius') scaleFactor = newValue / (obj.radius * obj.scaleX);
+                else if (property === 'circumference') scaleFactor = newValue / (2 * Math.PI * obj.radius * obj.scaleX);
+                else if (property === 'area') scaleFactor = Math.sqrt(newValue / (Math.PI * Math.pow(obj.radius * obj.scaleX, 2)));
+                break;
+            case 'Ngon':
+                const scaledRadius_px = obj.initialRadius * obj.scaleX;
+                if (property === 'sideLength') scaleFactor = newValue / (2 * scaledRadius_px * Math.sin(Math.PI / obj.sides));
+                else if (property === 'circumradius') scaleFactor = newValue / scaledRadius_px;
+                else if (property === 'area') scaleFactor = Math.sqrt(newValue / (0.5 * obj.sides * Math.pow(scaledRadius_px, 2) * Math.sin((2 * Math.PI) / obj.sides)));
+                break;
+            case 'Wedge':
+                const wedgeRadius_px = obj.initialRadius * obj.scaleX;
+                if (property === 'radius') scaleFactor = newValue / wedgeRadius_px;
+                else if (property === 'arcLength') scaleFactor = newValue / (2 * Math.PI * wedgeRadius_px * (obj.angleDeg / 360));
+                else if (property === 'area') scaleFactor = Math.sqrt(newValue / (Math.PI * Math.pow(wedgeRadius_px, 2) * (obj.angleDeg / 360)));
+                break;
+        }
+
+        if (scaleFactor !== 1 && isFinite(scaleFactor) && scaleFactor > 0) {
+            obj.scale(obj.scaleX * scaleFactor).setCoords();
+            canvas.renderAll();
+            // After scaling, refresh the properties panel to update all values
+            updatePropertiesPanel({ target: obj });
+        } else {
+            // If input was invalid or resulted in no change, revert to original value
+            updatePropertiesPanel({ target: obj });
         }
     }
 
-    function populatePolygonProperties(polygon) {
-        propertiesContent.innerHTML = '';
-        // The content is cleared. This panel can be used for other properties
-        // like fill/stroke color in the future.
-    }
+    unitSelector.addEventListener('change', (e) => {
+        currentUnit = e.target.value;
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+            // Re-trigger the properties panel update to reflect the new units
+            updatePropertiesPanel({ target: activeObject });
+        }
+    });
 
     canvas.on({
         'selection:created': updatePropertiesPanel,
         'selection:updated': updatePropertiesPanel,
         'selection:cleared': hidePropertiesPanel,
+        'object:modified': (e) => {
+            if (e.target === canvas.getActiveObject()) {
+                updatePropertiesPanel(e);
+            }
+        }
     });
 
     const tapeDiagramBtn = document.getElementById('tape-diagram-btn');
@@ -474,6 +837,21 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.forEachObject(obj => obj.set('selectable', false));
         canvas.renderAll();
     });
+
+    const addWedgeBtn = document.getElementById('add-wedge-btn');
+    addWedgeBtn.addEventListener('click', async () => {
+        const result = await showCustomPrompt({ title: 'Create Arc/Wedge', fields: [
+            { id: 'radius', label: 'Radius (px):', type: 'number', value: 100 },
+            { id: 'angle', label: 'Angle (degrees):', type: 'number', value: 90 }
+        ]});
+        if (result && result.radius && result.angle) {
+            createWedge(parseFloat(result.radius), parseFloat(result.angle));
+        }
+    });
+
+    const addNgonBtn = document.getElementById('add-ngon-btn');
+    const ngonSidesSelect = document.getElementById('ngon-sides');
+    addNgonBtn.addEventListener('click', () => createNgon(parseInt(ngonSidesSelect.value, 10)));
     
     canvas.on('mouse:down', async (o) => {
         const pointer = canvas.getPointer(o.e);
