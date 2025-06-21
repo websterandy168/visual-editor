@@ -18,7 +18,41 @@ input[type="file"] { font-size: 14px; }
 .canvas-container { flex-grow: 1; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 #editor-canvas { border: 1px solid #ccc; border-radius: 8px; }
 
-/* THESE ARE THE NEW STYLES */
+.properties-panel {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.properties-panel.hidden { display: none; }
+.properties-panel h3 { margin-top: 0; }
+#properties-content { display: flex; flex-direction: column; gap: 12px; max-height: 450px; overflow-y: auto; }
+.prop-group { display: flex; justify-content: space-between; align-items: center; }
+.prop-group label { font-size: 14px; color: #555; }
+.prop-group input {
+    width: 70px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.info-box {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+    pointer-events: none; /* So it doesn't interfere with mouse events on the canvas */
+    display: none; /* Hidden by default */
+    z-index: 1000;
+}
+
 #delete-btn {
     background-color: #f44336; /* Red */
     margin-bottom: 5px; /* Add a little space between buttons */
